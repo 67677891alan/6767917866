@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iOS Clone</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        
+        /* 手机外壳 */
+        .iphone-frame { width: 100%; max-width: 420px; height: 100%; max-height: 900px; background: #1a1a1a; position: relative; overflow: hidden; border-radius: 40px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+        
+        /* 壁纸 */
+        .wallpaper { position: absolute; inset: 0; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); transition: filter 0.3s; }
+        .wallpaper.blur { filter: blur(10px) brightness(0.6); }
+
+        /* 状态栏 */
+        .status-bar { position: absolute; top: 0; left: 0; right: 0; height: 50px; display: flex; justify-content: space-between; align-items: center; padding: 0 25px; color: #fff; font-size: 15px; font-weight: 600; z-index: 10; cursor: pointer; }
+        .status-right { display: flex; gap: 6px; }
+
+        /* 主屏幕网格 */
+        .home-screen { position: absolute; inset: 0; padding: 70px 20px 100px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; align-content: start; z-index: 5; transition: transform 0.3s; }
+        .app-icon { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; transition: transform 0.1s; }
+        .app-icon:active { transform: scale(0.9); }
+        .icon-img { width: 60px; height: 60px; border-radius: 14px; display: flex; justify-content: center; align-items: center; font-size: 28px; color: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .icon-label { color: #fff; font-size: 11px; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+
+        /* 底部 Dock */
+        .dock { position: absolute; bottom: 20px; left: 20px; right: 20px; height: 85px; background: rgba(255,255,255,0.2); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 35px; display: flex; justify-content: space-around; align-items: center; z-index: 10; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .dock .icon-img { width: 55px; height: 55px; border-radius: 14px; }
+
+        /* 页面指示点 */
+        .page-dots { position: absolute; bottom: 115px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; z-index: 10; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.3); transition: 0.3s; }
+        .dot.active { background: #fff; }
+
+        /* 设置页面 (侧滑) */
+        .settings-app { position: absolute; inset: 0; background: #f2f2f7; z-index: 20; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow-y: auto; padding-top: 50px; }
+        .settings-app.open { transform: translateX(0); }
+        .settings-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; border-bottom: 1px solid #e5e5ea; background: #f2f2f7; position: sticky; top: 0; z-index: 5; }
+        .settings-header h2 { font-size: 18px; font-weight: 600; }
+        .settings-header .done-btn { color: #007aff; font-size: 17px; font-weight: 500; cursor: pointer; }
+        .settings-list { padding: 15px; }
+        .settings-section { background: #fff; border-radius: 12px; margin-bottom: 20px; overflow: hidden; }
+        .settings-row { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #e5e5ea; }
+        .settings-row:last-child { border-bottom: none; }
+        .settings-icon { width: 29px; height: 29px; border-radius: 7px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 14px; margin-right: 12px; }
+        .settings-title { font-size: 17px; flex: 1; }
+        .settings-value { font-size: 17px; color: #8e8e93; margin-right: 8px; }
+        .settings-arrow { color: #c7c7cc; font-size: 14px; }
+
+        /* 控制中心 (下拉) */
+        .control-center { position: absolute; inset: 0; z-index: 30; background: rgba(0,0,0,0.4); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); transform: translateY(-100%); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); padding: 60px 20px; display: flex; flex-direction: column; gap: 15px; }
+        .control-center.open { transform: translateY(0); }
+        .cc-card { background: rgba(255,255,255,0.2); border-radius: 20px; padding: 15px; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .cc-music { height: 130px; }
+        .cc-music-icon { font-size: 40px; margin-bottom: 10px; }
+        .cc-music-text { font-size: 16px; opacity: 0.8; }
+        .cc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .cc-tile { height: 70px; background: rgba(255,255,255,0.2); border-radius: 20px; display: flex; align-items: center; padding: 0 20px; }
+        .cc-tile.active { background: #007aff; }
+        .cc-sliders { display: flex; gap: 15px; height: 180px; }
+        .cc-slider { flex: 1; background: rgba(255,255,255,0.2); border-radius: 20px; display: flex; flex-direction: column; justify-content: flex-end; padding: 15px; position: relative; }
+        .cc-slider-fill { position: absolute; bottom: 0; left: 0; right: 0; background: #fff; border-radius: 20px; transition: height 0.1s; }
+        .cc-slider-icon { font-size: 20px; z-index: 2; align-self: center; }
+        
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="iphone-frame">
+        <div class="wallpaper" id="wallpaper"></div>
+
+        <!-- 状态栏 -->
+        <div class="status-bar" id="statusBar">
+            <span id="clock">23:36</span>
+            <div class="status-right">
+                <span>📶</span>
+                <span>📶</span>
+                <span>🔋</span>
+            </div>
+        </div>
+
+        <!-- 主屏幕网格 -->
+        <div class="home-screen">
+            <div class="app-icon" onclick="openSettings()">
+                <div class="icon-img" style="background: #8E8E93;">⚙️</div>
+                <div class="icon-label">设置</div>
+            </div>
+            <div class="app-icon">
+                <div class="icon-img" style="background: #007aff;">🚀</div>
+                <div class="icon-label">爱加速</div>
+            </div>
+            <div class="app-icon">
+                <div class="icon-img" style="background: #8E8E93;">👥</div>
+                <div class="icon-label">联系人</div>
+            </div>
+            <div class="app-icon">
+                <div class="icon-img" style="background: #007aff;">📁</div>
+                <div class="icon-label">文件</div>
+            </div>
+            <div class="app-icon">
+                <div class="icon-img" style="background: #32ade6;">📖</div>
+                <div class="icon-label">翻译</div>
+            </div>
+            <div class="app-icon">
+                <div class="icon-img" style="background: #007aff;">🐦</div>
+                <div class="icon-label">菜鸟</div>
+            </div>
+            <div class="app-icon">
+                <div class="icon-img" style="background: #ffcc00;">🍔</div>
+                <div class="icon-label">美团</div>
+            </div>
+            <div class="app-icon">
+                <div class="icon-img" style="background: #ff3b30;">🛍️</div>
+                <div class="icon-label">拼多多</div>
+            </div>
+            <div class="app-icon">
+                <div class="icon-img" style="background: #5856d6;">🧠</div>
+                <div class="icon-label">DeepSeek</div>
+            </div>
+            <div class="app-icon">
+                <div class="icon-img" style="background: #ffcc00;">✉️</div>
+                <div class="icon-label">QQ邮箱</div>
+            </div>
+            <div class="app-icon">
+                <div class="icon-img" style="background: #ff3b30;">🛒</div>
+                <div class="icon-label">京东</div>
+            </div>
+            <div class="app-icon">
+                <div class="icon-img" style="background: #8E8E93;">🔨</div>
+                <div class="icon-label">Developer</div>
+            </div>
+        </div>
+
+        <!-- 页面指示点 -->
+        <div class="page-dots">
+            <div class="dot active"></div>
+            <div class="dot"></div>
+        </div>
+
+        <!-- Dock -->
+        <div class="dock">
+            <div class="app-icon"><div class="icon-img" style="background: #34c759;">📞</div></div>
+            <div class="app-icon"><div class="icon-img" style="background: #007aff;">🧭</div></div>
+            <div class="app-icon"><div class="icon-img" style="background: #34c759;">💬</div></div>
+            <div class="app-icon"><div class="icon-img" style="background: #8E8E93;">📷</div></div>
+        </div>
+
+        <!-- 设置页面 (侧滑) -->
+        <div class="settings-app" id="settingsApp">
+            <div class="settings-header">
+                <h2>设置</h2>
+                <span class="done-btn" onclick="closeSettings()">完成</span>
+            </div>
+            <div class="settings-list">
+                <div class="settings-section">
+                    <div class="settings-row"><div class="settings-icon" style="background:#ff9500;">✈️</div><span class="settings-title">飞行模式</span></div>
+                    <div class="settings-row"><div class="settings-icon" style="background:#007aff;">📶</div><span class="settings-title">无线局域网</span><span class="settings-value">CMCC-qJxY</span><span class="settings-arrow">›</span></div>
+                    <div class="settings-row"><div class="settings-icon" style="background:#34c759;">📡</div><span class="settings-title">蜂窝网络</span><span class="settings-value">关闭</span><span class="settings-arrow">›</span></div>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-row"><div class="settings-icon" style="background:#34c759;">🔋</div><span class="settings-title">电池</span><span class="settings-arrow">›</span></div>
+                    <div class="settings-row"><div class="settings-icon" style="background:#007aff;">🛡️</div><span class="settings-title">VPN</span><span class="settings-value">未连接</span><span class="settings-arrow">›</span></div>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-row"><div class="settings-icon" style="background:#8E8E93;">⚙️</div><span class="settings-title">通用</span><span class="settings-arrow">›</span></div>
+                    <div class="settings-row"><div class="settings-icon" style="background:#007aff;">🏃</div><span class="settings-title">无障碍</span><span class="settings-arrow">›</span></div>
+                    <div class="settings-row"><div class="settings-icon" style="background:#000;">🌙</div><span class="settings-title">待机显示</span><span class="settings-arrow">›</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制中心 (下拉) -->
+        <div class="control-center" id="controlCenter" onclick="closeControlCenter(event)">
+            <div class="cc-card cc-music" onclick="event.stopPropagation()">
+                <div class="cc-music-icon">🎵</div>
+                <div class="cc-music-text">未在播放</div>
+            </div>
+            <div class="cc-grid" onclick="event.stopPropagation()">
+                <div class="cc-tile"><span style="margin-right:15px; font-size:20px;">📶</span><span>无线局域网</span></div>
+                <div class="cc-tile"><span style="margin-right:15px; font-size:20px;">📡</span><span>蜂窝网络</span></div>
+                <div class="cc-tile"><span style="margin-right:15px; font-size:20px;">✈️</span><span>飞行模式</span></div>
+                <div class="cc-tile active"><span style="margin-right:15px; font-size:20px;">🔵</span><span>蓝牙</span></div>
+            </div>
+            <div class="cc-sliders" onclick="event.stopPropagation()">
+                <div class="cc-slider">
+                    <div class="cc-slider-fill" style="height: 60%;"></div>
+                    <div class="cc-slider-icon">☀️</div>
+                </div>
+                <div class="cc-slider">
+                    <div class="cc-slider-fill" style="height: 80%;"></div>
+                    <div class="cc-slider-icon">🔊</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 动态时间
+        function updateTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}`;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // 打开设置
+        function openSettings() {
+            document.getElementById('settingsApp').classList.add('open');
+            document.getElementById('wallpaper').classList.add('blur');
+        }
+
+        // 关闭设置
+        function closeSettings() {
+            document.getElementById('settingsApp').classList.remove('open');
+            document.getElementById('wallpaper').classList.remove('blur');
+        }
+
+        // 控制中心下拉
+        document.getElementById('statusBar').addEventListener('click', () => {
+            document.getElementById('controlCenter').classList.add('open');
+            document.getElementById('wallpaper').classList.add('blur');
+        });
+
+        // 点击背景关闭控制中心
+        function closeControlCenter(event) {
+            if (event.target === document.getElementById('controlCenter')) {
+                document.getElementById('controlCenter').classList.remove('open');
+                document.getElementById('wallpaper').classList.remove('blur');
+            }
+        }
+    </script>
+</body>
+</html>
